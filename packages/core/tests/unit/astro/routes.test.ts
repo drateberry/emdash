@@ -46,7 +46,7 @@ describe("core media route injection", () => {
 });
 
 describe("content routes injection", () => {
-	it("injects a rest-parameter catch-all that delegates to content-entry.astro", () => {
+	it("injects a non-root catch-all that delegates to content-entry.astro", () => {
 		const routes: Array<{ pattern: string; entrypoint: string }> = [];
 		injectContentRoutes((route) => {
 			routes.push({
@@ -55,9 +55,12 @@ describe("content routes injection", () => {
 			});
 		});
 
+		// The pattern must require at least one segment ([first]/[...rest])
+		// rather than bare [...all], so `/` falls through to the user's
+		// src/pages/index.astro instead of being claimed by the catch-all.
 		expect(routes).toEqual([
 			expect.objectContaining({
-				pattern: "/[...emdashContent]",
+				pattern: "/[emdashFirst]/[...emdashRest]",
 				entrypoint: expect.stringContaining("content-entry.astro"),
 			}),
 		]);

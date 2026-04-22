@@ -751,13 +751,15 @@ export function injectMcpRoute(injectRoute: InjectRoute): void {
  * Injects the content-entry catch-all route used by the `contentRoutes`
  * integration option. Only called when `contentRoutes` is configured.
  *
- * The catch-all has the lowest routing specificity in Astro, so any user
- * file-based page (`src/pages/about.astro`, `src/pages/blog/[slug].astro`,
- * etc.) takes priority automatically.
+ * The pattern is `/[first]/[...rest]` rather than `/[...all]` so the root
+ * URL `/` never matches — otherwise the rest-param's zero-segment match
+ * would steal the homepage from a user's `src/pages/index.astro`. With
+ * this shape, the route matches every non-root path (`/foo`, `/foo/bar`,
+ * …) and file-based user routes still outrank it on any exact match.
  */
 export function injectContentRoutes(injectRoute: InjectRoute): void {
 	injectRoute({
-		pattern: "/[...emdashContent]",
+		pattern: "/[emdashFirst]/[...emdashRest]",
 		entrypoint: resolveRoute("content-entry.astro"),
 	});
 }

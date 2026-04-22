@@ -15,8 +15,10 @@ import Entrypoint from "virtual:emdash/content-entrypoint";
 
 export const prerender = false;
 
-const rawPath = Astro.params.emdashContent;
-const path = "/" + (Array.isArray(rawPath) ? rawPath.join("/") : (rawPath ?? ""));
+const first = Astro.params.emdashFirst;
+const rest = Astro.params.emdashRest;
+const restPath = Array.isArray(rest) ? rest.join("/") : (rest ?? "");
+const path = "/" + first + (restPath ? "/" + restPath : "");
 
 let result: Awaited<ReturnType<typeof resolveEmDashPath>> = null;
 if (Entrypoint) {
