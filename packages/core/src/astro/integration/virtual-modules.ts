@@ -59,6 +59,9 @@ export const RESOLVED_VIRTUAL_SEED_ID = "\0" + VIRTUAL_SEED_ID;
 export const VIRTUAL_WAIT_UNTIL_ID = "virtual:emdash/wait-until";
 export const RESOLVED_VIRTUAL_WAIT_UNTIL_ID = "\0" + VIRTUAL_WAIT_UNTIL_ID;
 
+export const VIRTUAL_CONTENT_ENTRYPOINT_ID = "virtual:emdash/content-entrypoint";
+export const RESOLVED_VIRTUAL_CONTENT_ENTRYPOINT_ID = "\0" + VIRTUAL_CONTENT_ENTRYPOINT_ID;
+
 /**
  * Generates the config virtual module.
  */
@@ -334,6 +337,31 @@ export function generateBlockComponentsModule(descriptors: PluginDescriptor[]): 
 	});
 
 	return `${imports.join("\n")}\nexport const pluginBlockComponents = { ${spreads.join(", ")} };`;
+}
+
+/**
+ * Generates the content-entrypoint virtual module.
+ *
+ * The bridge route (`content-entry.astro`) imports its rendering component
+ * from this module. When `contentRoutes` is configured, the resolved path is
+ * re-exported as the default. When unset, the default export is `null` — the
+ * bridge route treats `null` as "feature disabled" and returns 404, though in
+ * practice the route is only injected when `contentRoutes` is set so this
+ * branch is defensive.
+ *
+ * Path resolution happens in the integration before this generator runs:
+ * project-relative paths are resolved against `astroConfig.root`, absolute
+ * paths pass through, and package specifiers pass through as-is. Vite/Astro
+ * handle the final import from there.
+ */
+export function generateContentEntrypointModule(entrypoint: string | undefined): string {
+	if (!entrypoint) {
+		return `export default null;`;
+	}
+	return [
+		`import Entrypoint from ${JSON.stringify(entrypoint)};`,
+		`export default Entrypoint;`,
+	].join("\n");
 }
 
 /**

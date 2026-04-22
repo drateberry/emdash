@@ -413,6 +413,37 @@ export interface EmDashConfig {
 		/** URL or path to a custom favicon for the admin panel. */
 		favicon?: string;
 	};
+
+	/**
+	 * Opt-in frontend routing driven by each collection's `urlPattern`.
+	 *
+	 * When set, EmDash injects a catch-all Astro route that resolves incoming
+	 * request paths against the `urlPattern` of every collection (via
+	 * `resolveEmDashPath`) and delegates rendering to the configured
+	 * entrypoint component. The entrypoint receives `{ entry, collection,
+	 * params }` via `Astro.props` — the shape is `ResolvePathResult<T>` from
+	 * `emdash` — so the user keeps full layout control.
+	 *
+	 * Off by default. File-based pages in `src/pages/` always take priority
+	 * over the catch-all, so enabling this is non-breaking for existing sites.
+	 *
+	 * @example
+	 * ```ts
+	 * emdash({
+	 *   contentRoutes: { entrypoint: "./src/layouts/EmDashEntry.astro" },
+	 * })
+	 * ```
+	 */
+	contentRoutes?: {
+		/**
+		 * Path to an Astro component rendered for every matched content URL.
+		 *
+		 * Accepts a project-relative path (e.g. `./src/layouts/EmDashEntry.astro`),
+		 * an absolute filesystem path, or a package specifier
+		 * (e.g. `@my-theme/emdash-entry`).
+		 */
+		entrypoint: string;
+	};
 }
 
 /**

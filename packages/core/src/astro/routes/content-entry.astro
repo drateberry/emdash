@@ -1,0 +1,31 @@
+---
+/**
+ * Content entry bridge route — injected by the EmDash integration when
+ * `contentRoutes` is configured.
+ *
+ * Matches any path not already served by a user-defined Astro page, resolves
+ * the path against each collection's `urlPattern` via `resolveEmDashPath`,
+ * and renders the user-supplied entrypoint with `{ entry, collection, params }`
+ * as props. The entrypoint owns layout and markup; EmDash only wires the
+ * lookup.
+ */
+import { resolveEmDashPath } from "emdash";
+// @ts-ignore - virtual module
+import Entrypoint from "virtual:emdash/content-entrypoint";
+
+export const prerender = false;
+
+const rawPath = Astro.params.emdashContent;
+const path = "/" + (Array.isArray(rawPath) ? rawPath.join("/") : (rawPath ?? ""));
+
+let result: Awaited<ReturnType<typeof resolveEmDashPath>> = null;
+if (Entrypoint) {
+	result = await resolveEmDashPath(path);
+}
+
+if (!Entrypoint || !result) {
+	return new Response(null, { status: 404 });
+}
+---
+
+<Entrypoint entry={result.entry} collection={result.collection} params={result.params} />

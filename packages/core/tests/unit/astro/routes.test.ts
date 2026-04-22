@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { injectCoreRoutes } from "../../../src/astro/integration/routes.js";
+import {
+	injectContentRoutes,
+	injectCoreRoutes,
+} from "../../../src/astro/integration/routes.js";
 import { GET as getMediaFile } from "../../../src/astro/routes/api/media/file/[...key].js";
 
 function mockMediaContext(key: string | undefined) {
@@ -39,6 +42,25 @@ describe("core media route injection", () => {
 				entrypoint: expect.stringContaining("api/media/file/[...key].ts"),
 			}),
 		);
+	});
+});
+
+describe("content routes injection", () => {
+	it("injects a rest-parameter catch-all that delegates to content-entry.astro", () => {
+		const routes: Array<{ pattern: string; entrypoint: string }> = [];
+		injectContentRoutes((route) => {
+			routes.push({
+				...route,
+				entrypoint: route.entrypoint.replaceAll("\\", "/"),
+			});
+		});
+
+		expect(routes).toEqual([
+			expect.objectContaining({
+				pattern: "/[...emdashContent]",
+				entrypoint: expect.stringContaining("content-entry.astro"),
+			}),
+		]);
 	});
 });
 

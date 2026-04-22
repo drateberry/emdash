@@ -10,12 +10,20 @@
  * to avoid bundling Node.js-only code into the production build.
  */
 
+import { isAbsolute, resolve as resolvePath } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { AstroIntegration, AstroIntegrationLogger } from "astro";
 
 import type { ResolvedPlugin } from "../../plugins/types.js";
 import { local } from "../storage/adapters.js";
 import { notoSans } from "./font-provider.js";
-import { injectCoreRoutes, injectBuiltinAuthRoutes, injectMcpRoute } from "./routes.js";
+import {
+	injectBuiltinAuthRoutes,
+	injectContentRoutes,
+	injectCoreRoutes,
+	injectMcpRoute,
+} from "./routes.js";
 import type { EmDashConfig, PluginDescriptor } from "./runtime.js";
 import { createViteConfig } from "./vite-config.js";
 
@@ -247,6 +255,21 @@ export function emdash(config: EmDashConfig = {}): AstroIntegration {
 								},
 							];
 
+				// Resolve `contentRoutes.entrypoint` to an absolute path (or pass
+				// a package specifier through untouched) so the virtual module can
+				// import it without needing a file location of its own.
+				if (resolvedConfig.contentRoutes?.entrypoint) {
+					const raw = resolvedConfig.contentRoutes.entrypoint;
+					const isPackageSpecifier = !raw.startsWith(".") && !isAbsolute(raw);
+					if (!isPackageSpecifier) {
+						const projectRoot = fileURLToPath(astroConfig.root);
+						resolvedConfig.contentRoutes = {
+							...resolvedConfig.contentRoutes,
+							entrypoint: resolvePath(projectRoot, raw),
+						};
+					}
+				}
+
 				updateConfig({
 					security: securityConfig,
 					// fonts is a valid AstroConfig key but may not be in the
@@ -274,6 +297,12 @@ export function emdash(config: EmDashConfig = {}): AstroIntegration {
 				// Inject MCP endpoint (always on — bearer-token-only, no cost if unused)
 				if (resolvedConfig.mcp !== false) {
 					injectMcpRoute(injectRoute);
+				}
+
+				// Inject the content-entry catch-all when `contentRoutes` is configured.
+				// File-based pages in src/pages/ always outrank this rest-parameter route.
+				if (resolvedConfig.contentRoutes?.entrypoint) {
+					injectContentRoutes(injectRoute);
 				}
 
 				// In playground mode, inject the playground middleware FIRST.

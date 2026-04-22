@@ -748,6 +748,21 @@ export function injectMcpRoute(injectRoute: InjectRoute): void {
 }
 
 /**
+ * Injects the content-entry catch-all route used by the `contentRoutes`
+ * integration option. Only called when `contentRoutes` is configured.
+ *
+ * The catch-all has the lowest routing specificity in Astro, so any user
+ * file-based page (`src/pages/about.astro`, `src/pages/blog/[slug].astro`,
+ * etc.) takes priority automatically.
+ */
+export function injectContentRoutes(injectRoute: InjectRoute): void {
+	injectRoute({
+		pattern: "/[...emdashContent]",
+		entrypoint: resolveRoute("content-entry.astro"),
+	});
+}
+
+/**
  * Injects passkey/oauth/magic-link auth routes.
  * Only used when NOT using external auth.
  */

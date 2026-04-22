@@ -40,6 +40,8 @@ import {
 	RESOLVED_VIRTUAL_SEED_ID,
 	VIRTUAL_WAIT_UNTIL_ID,
 	RESOLVED_VIRTUAL_WAIT_UNTIL_ID,
+	VIRTUAL_CONTENT_ENTRYPOINT_ID,
+	RESOLVED_VIRTUAL_CONTENT_ENTRYPOINT_ID,
 	generateSeedModule,
 	generateWaitUntilModule,
 	generateConfigModule,
@@ -52,6 +54,7 @@ import {
 	generateSandboxedPluginsModule,
 	generateMediaProvidersModule,
 	generateBlockComponentsModule,
+	generateContentEntrypointModule,
 } from "./virtual-modules.js";
 
 const LOCALE_MESSAGES_RE = /[/\\]([a-z]{2}(?:-[A-Z]{2})?)[/\\]messages\.mjs$/;
@@ -182,6 +185,9 @@ export function createVirtualModulesPlugin(options: VitePluginOptions): Plugin {
 			if (id === VIRTUAL_WAIT_UNTIL_ID) {
 				return RESOLVED_VIRTUAL_WAIT_UNTIL_ID;
 			}
+			if (id === VIRTUAL_CONTENT_ENTRYPOINT_ID) {
+				return RESOLVED_VIRTUAL_CONTENT_ENTRYPOINT_ID;
+			}
 		},
 		load(id: string) {
 			if (id === RESOLVED_VIRTUAL_CONFIG_ID) {
@@ -245,6 +251,11 @@ export function createVirtualModulesPlugin(options: VitePluginOptions): Plugin {
 			// waitUntil under the Cloudflare adapter, undefined otherwise.
 			if (id === RESOLVED_VIRTUAL_WAIT_UNTIL_ID) {
 				return generateWaitUntilModule(astroConfig.adapter?.name);
+			}
+			// Generate content-entrypoint module — re-exports the user's
+			// entrypoint component when `contentRoutes` is configured.
+			if (id === RESOLVED_VIRTUAL_CONTENT_ENTRYPOINT_ID) {
+				return generateContentEntrypointModule(resolvedConfig.contentRoutes?.entrypoint);
 			}
 		},
 	};

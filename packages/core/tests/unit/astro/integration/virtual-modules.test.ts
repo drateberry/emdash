@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { generateDialectModule } from "../../../../src/astro/integration/virtual-modules.js";
+import {
+	generateContentEntrypointModule,
+	generateDialectModule,
+} from "../../../../src/astro/integration/virtual-modules.js";
 
 describe("generateDialectModule", () => {
 	it("emits undefined createDialect and null stub when no entrypoint is configured", () => {
@@ -38,5 +41,30 @@ describe("generateDialectModule", () => {
 			supportsRequestScope: false,
 		});
 		expect(out).toContain(`export const dialectType = "postgres"`);
+	});
+});
+
+describe("generateContentEntrypointModule", () => {
+	it("emits a null default export when contentRoutes is not configured", () => {
+		const out = generateContentEntrypointModule(undefined);
+		expect(out).toBe("export default null;");
+	});
+
+	it("re-exports an absolute filesystem path as the default", () => {
+		const out = generateContentEntrypointModule("/abs/path/EmDashEntry.astro");
+		expect(out).toContain(`import Entrypoint from "/abs/path/EmDashEntry.astro"`);
+		expect(out).toContain("export default Entrypoint");
+	});
+
+	it("re-exports a package specifier as the default", () => {
+		const out = generateContentEntrypointModule("@my-theme/emdash-entry");
+		expect(out).toContain(`import Entrypoint from "@my-theme/emdash-entry"`);
+		expect(out).toContain("export default Entrypoint");
+	});
+
+	it("escapes special characters in the entrypoint path", () => {
+		// A path with a quote would otherwise break the generated import statement.
+		const out = generateContentEntrypointModule(`/weird/"path"/Entry.astro`);
+		expect(out).toContain(`"/weird/\\"path\\"/Entry.astro"`);
 	});
 });
