@@ -734,20 +734,49 @@ function patternToRegex(pattern: string): { regex: RegExp; paramNames: string[] 
 	return { regex: new RegExp(`^${regexStr}$`), paramNames };
 }
 
-/** Cached compiled URL patterns for resolveEmDashPath */
+/** Cached compiled URL patterns for resolveEmDashPath and getEntryUrl */
 interface CachedPattern {
 	slug: string;
+	urlPattern: string;
 	regex: RegExp;
 	paramNames: string[];
 }
 let cachedUrlPatterns: CachedPattern[] | null = null;
 
 /**
- * Invalidate the cached URL patterns used by resolveEmDashPath.
+ * Invalidate the cached URL patterns used by resolveEmDashPath and getEntryUrl.
  * Call when collection URL patterns change (schema updates).
  */
 export function invalidateUrlPatternCache(): void {
 	cachedUrlPatterns = null;
+}
+
+/**
+ * Lazily build the URL pattern cache from the schema registry. Shared by
+ * `resolveEmDashPath` (URL → entry) and `getEntryUrl` (entry → URL) so the
+ * collection list is only loaded once per worker.
+ */
+async function ensureUrlPatternCache(): Promise<CachedPattern[]> {
+	if (cachedUrlPatterns) return cachedUrlPatterns;
+	const { getDb } = await import("./loader.js");
+	const { SchemaRegistry } = await import("./schema/registry.js");
+	const db = await getDb();
+	const registry = new SchemaRegistry(db);
+	const collections = await registry.listCollections();
+
+	const built: CachedPattern[] = [];
+	for (const collection of collections) {
+		if (!collection.urlPattern) continue;
+		const { regex, paramNames } = patternToRegex(collection.urlPattern);
+		built.push({
+			slug: collection.slug,
+			urlPattern: collection.urlPattern,
+			regex,
+			paramNames,
+		});
+	}
+	cachedUrlPatterns = built;
+	return built;
 }
 
 /**
@@ -772,23 +801,9 @@ export function invalidateUrlPatternCache(): void {
 export async function resolveEmDashPath<T = Record<string, unknown>>(
 	path: string,
 ): Promise<ResolvePathResult<T> | null> {
-	// Build and cache compiled patterns on first call
-	if (!cachedUrlPatterns) {
-		const { getDb } = await import("./loader.js");
-		const { SchemaRegistry } = await import("./schema/registry.js");
-		const db = await getDb();
-		const registry = new SchemaRegistry(db);
-		const collections = await registry.listCollections();
+	const patterns = await ensureUrlPatternCache();
 
-		cachedUrlPatterns = [];
-		for (const collection of collections) {
-			if (!collection.urlPattern) continue;
-			const { regex, paramNames } = patternToRegex(collection.urlPattern);
-			cachedUrlPatterns.push({ slug: collection.slug, regex, paramNames });
-		}
-	}
-
-	for (const pattern of cachedUrlPatterns) {
+	for (const pattern of patterns) {
 		const match = path.match(pattern.regex);
 		if (!match) continue;
 
@@ -809,4 +824,32 @@ export async function resolveEmDashPath<T = Record<string, unknown>>(
 	}
 
 	return null;
+}
+
+/**
+ * Build the public URL for a content entry using its collection's `urlPattern`.
+ *
+ * The inverse of `resolveEmDashPath`. Use this in templates so internal links
+ * follow whatever `urlPattern` is configured in the admin — no hardcoded
+ * `/blog/` strings. Returns `null` when the collection has no `urlPattern`
+ * configured, so callers can fall back to their own convention (or skip the
+ * link) for collections that aren't URL-routed.
+ *
+ * Supports both `{slug}` and `{id}` placeholders (matching the existing
+ * redirect/preview-url subsystems).
+ *
+ * @example
+ * ```ts
+ * import { getEntryUrl } from "emdash";
+ *
+ * // Given posts.urlPattern = "/blog/{slug}":
+ * const href = await getEntryUrl("posts", "hello-world");
+ * // → "/blog/hello-world"
+ * ```
+ */
+export async function getEntryUrl(collection: string, slug: string): Promise<string | null> {
+	const patterns = await ensureUrlPatternCache();
+	const target = patterns.find((p) => p.slug === collection);
+	if (!target) return null;
+	return target.urlPattern.replace("{slug}", slug).replace("{id}", slug);
 }

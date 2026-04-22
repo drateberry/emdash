@@ -109,6 +109,7 @@ export {
 	getEmDashCollection,
 	getEmDashEntry,
 	getEditMeta,
+	getEntryUrl,
 	getTranslations,
 	resolveEmDashPath,
 } from "./query.js";
