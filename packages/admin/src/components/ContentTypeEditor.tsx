@@ -267,7 +267,10 @@ export function ContentTypeEditor({
 				label,
 				labelSingular: labelSingular || undefined,
 				description: description || undefined,
-				urlPattern: urlPattern || undefined,
+				// Empty input on update must be `null` (explicit clear), not
+				// `undefined` (PATCH: "leave unchanged"). Otherwise clearing
+				// the admin field keeps the old DB value.
+				urlPattern: urlPattern.trim() === "" ? null : urlPattern,
 				supports,
 				hasSeo,
 				commentsEnabled,

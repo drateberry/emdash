@@ -87,7 +87,8 @@ export interface UpdateCollectionInput {
 	description?: string;
 	icon?: string;
 	supports?: string[];
-	urlPattern?: string;
+	/** Pass `null` to clear an existing pattern; `undefined` leaves it unchanged. */
+	urlPattern?: string | null;
 	hasSeo?: boolean;
 	commentsEnabled?: boolean;
 	commentsModeration?: "all" | "first_time" | "none";

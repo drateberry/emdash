@@ -766,11 +766,14 @@ async function ensureUrlPatternCache(): Promise<CachedPattern[]> {
 
 	const built: CachedPattern[] = [];
 	for (const collection of collections) {
-		if (!collection.urlPattern) continue;
-		const { regex, paramNames } = patternToRegex(collection.urlPattern);
+		// Fall back to `/<collection>/{slug}` when no pattern is configured, matching
+		// the admin's `contentUrl()` helper. Keeps entry → URL and URL → entry
+		// consistent no matter how the user arrives at the default.
+		const urlPattern = collection.urlPattern ?? `/${collection.slug}/{slug}`;
+		const { regex, paramNames } = patternToRegex(urlPattern);
 		built.push({
 			slug: collection.slug,
-			urlPattern: collection.urlPattern,
+			urlPattern,
 			regex,
 			paramNames,
 		});
