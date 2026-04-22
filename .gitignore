@@ -70,3 +70,6 @@ examples/wp-theme-unit-test/
 
 .perf-query-counts
 query-counts-out/
+
+# Local build tarballs (output of `pnpm pack`; not checked in)
+/*.tgz
