@@ -13,8 +13,10 @@
  */
 
 import { getFallbackChain, getI18nConfig, isI18nEnabled } from "./i18n/config.js";
+import { getDb } from "./loader.js";
 import { requestCached } from "./request-cache.js";
 import { getRequestContext } from "./request-context.js";
+import { SchemaRegistry } from "./schema/registry.js";
 import { isMissingTableError } from "./utils/db-errors.js";
 import {
 	createEditable,
@@ -758,8 +760,11 @@ export function invalidateUrlPatternCache(): void {
  */
 async function ensureUrlPatternCache(): Promise<CachedPattern[]> {
 	if (cachedUrlPatterns) return cachedUrlPatterns;
-	const { getDb } = await import("./loader.js");
-	const { SchemaRegistry } = await import("./schema/registry.js");
+	// Imports are static (see top of file) rather than `await import(...)` —
+	// Vite's SSR dep optimizer puts each dynamic import in its own chunk, and
+	// the chunk cascade during cold-start discovery invalidates in-flight
+	// renders (loader-*.js ENOENT). Static imports keep this inside the main
+	// emdash SSR bundle.
 	const db = await getDb();
 	const registry = new SchemaRegistry(db);
 	const collections = await registry.listCollections();
